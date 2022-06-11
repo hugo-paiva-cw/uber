@@ -50,6 +50,14 @@ class _RideState extends State<Ride> {
         LocationSettings(accuracy: LocationAccuracy.high, distanceFilter: 10);
     Geolocator.getPositionStream(locationSettings: locationSettings)
         .listen((Position position) {
+          _showPassengerMarker(position);
+
+          _cameraPosition = CameraPosition(
+              target: LatLng(position.latitude, position.longitude),
+            zoom: 19
+          );
+          _moveCamera(_cameraPosition);
+
       setState(() {
         _driversLocal = position;
       });
@@ -102,6 +110,9 @@ class _RideState extends State<Ride> {
     FirebaseFirestore db = FirebaseFirestore.instance;
     DocumentSnapshot<Map> documentSnapshot =
         await db.collection('requisitions').doc(idRequisition).get();
+
+    _requisitionData = documentSnapshot.data();
+    _addRequisitionListener();
   }
 
   _addRequisitionListener() async {
@@ -142,31 +153,32 @@ class _RideState extends State<Ride> {
       _acceptRide();
     });
 
-    double driverLatitude = _requisitionData?['driver']['latitude'];
-    double driverLongitude = _requisitionData?['driver']['longitude'];
-
-    Position position = Position(
-        longitude: driverLongitude,
-        latitude: driverLatitude,
-        timestamp: DateTime.now(),
-        accuracy: 0.0,
-        altitude: 0.0,
-        heading: 0.0,
-        speed: 0.0,
-        speedAccuracy: 0.0);
-    _showPassengerMarker(position);
-
-    _cameraPosition = CameraPosition(
-        target: LatLng(position.latitude, position.longitude), zoom: 19);
+    // double driverLatitude = _requisitionData?['driver']['latitude'];
+    // double driverLongitude = _requisitionData?['driver']['longitude'];
+    //
+    // Position position = Position(
+    //     longitude: driverLongitude,
+    //     latitude: driverLatitude,
+    //     timestamp: DateTime.now(),
+    //     accuracy: 0.0,
+    //     altitude: 0.0,
+    //     heading: 0.0,
+    //     speed: 0.0,
+    //     speedAccuracy: 0.0);
+    // _showPassengerMarker(position);
+    //
+    // _cameraPosition = CameraPosition(
+    //     target: LatLng(position.latitude, position.longitude), zoom: 19);
     // _moveCamera(_cameraPosition);
   }
 
   _statusOnTheWay() {
     _statusMessage = 'A caminho do passageiro';
 
-    _setMainButton('Iniciar corrida', const Color(0xff1ebbd8), () {
-      _startRide();
-    });
+    // _setMainButton('Iniciar corrida', const Color(0xff1ebbd8), () {
+    //   _startRide();
+    // });
+    _setMainButton('A caminho do passageiro', Colors.grey, () {});
 
     double passengerLatitude = _requisitionData?['passenger']['latitude'];
     double passengerLongitude = _requisitionData?['passenger']['longitude'];
@@ -177,30 +189,30 @@ class _RideState extends State<Ride> {
     _showTwoMarkers(LatLng(driverLatitude, driverLongitude),
         LatLng(passengerLatitude, passengerLongitude));
 
-    late double northEastLatitude,
-        northEastLongitude,
-        southWestLatitude,
-        southWestLongitude;
-
-    if (driverLatitude <= passengerLatitude) {
-      southWestLatitude = driverLatitude;
-      northEastLatitude = passengerLatitude;
-    } else {
-      southWestLatitude = passengerLatitude;
-      northEastLatitude = driverLatitude;
-    }
-
-    if (driverLongitude <= passengerLongitude) {
-      southWestLongitude = driverLongitude;
-      northEastLongitude = passengerLongitude;
-    } else {
-      southWestLongitude = driverLongitude;
-      northEastLongitude = passengerLongitude;
-    }
-
-    _moveCameraUsingBounds(LatLngBounds(
-        southwest: LatLng(southWestLatitude, southWestLongitude),
-        northeast: LatLng(northEastLatitude, northEastLongitude)));
+    // late double northEastLatitude,
+    //     northEastLongitude,
+    //     southWestLatitude,
+    //     southWestLongitude;
+    //
+    // if (driverLatitude <= passengerLatitude) {
+    //   southWestLatitude = driverLatitude;
+    //   northEastLatitude = passengerLatitude;
+    // } else {
+    //   southWestLatitude = passengerLatitude;
+    //   northEastLatitude = driverLatitude;
+    // }
+    //
+    // if (driverLongitude <= passengerLongitude) {
+    //   southWestLongitude = driverLongitude;
+    //   northEastLongitude = passengerLongitude;
+    // } else {
+    //   southWestLongitude = driverLongitude;
+    //   northEastLongitude = passengerLongitude;
+    // }
+    //
+    // _moveCameraUsingBounds(LatLngBounds(
+    //     southwest: LatLng(southWestLatitude, southWestLongitude),
+    //     northeast: LatLng(northEastLatitude, northEastLongitude)));
   }
 
   _startRide() {}
@@ -247,6 +259,10 @@ class _RideState extends State<Ride> {
 
     setState(() {
       _markers = listMarkers;
+      _moveCamera(CameraPosition(
+          target: LatLng(driverPosition.latitude, driverPosition.longitude),
+        zoom: 18
+      ));
     });
   }
 
@@ -256,9 +272,8 @@ class _RideState extends State<Ride> {
     driver?.latitude = _driversLocal.latitude;
     driver?.longitude = _driversLocal.longitude;
 
-    String idRequisition = _requisitionData?['id'];
-
     FirebaseFirestore db = FirebaseFirestore.instance;
+    String idRequisition = _requisitionData?['id'];
 
     db.collection('requisitions').doc(idRequisition).update({
       'driver': driver!.toMap(),
@@ -286,7 +301,7 @@ class _RideState extends State<Ride> {
     _addLocationListener();
 
     _getRequisition();
-    _addRequisitionListener();
+    // _addRequisitionListener();
   }
 
   @override

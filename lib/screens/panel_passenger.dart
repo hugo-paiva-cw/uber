@@ -63,13 +63,17 @@ class _PanelPassengerState extends State<PanelPassenger> {
         LocationSettings(accuracy: LocationAccuracy.high, distanceFilter: 10);
     Geolocator.getPositionStream(locationSettings: locationSettings)
         .listen((Position position) {
+      _showPassengerMarker(position);
 
+      CameraPosition cameraPosition = CameraPosition(
+          target: LatLng(position.latitude, position.longitude), zoom: 19);
+      _moveCamera(cameraPosition);
 
-      if (position != null) {
-        setState(() {
-          _passengerLocation = position;
-        });
-      }
+      // if (position != null) {
+      //   setState(() {
+      //     _passengerLocation = position;
+      //   });
+      // }
 
     });
   }
@@ -79,7 +83,11 @@ class _PanelPassengerState extends State<PanelPassenger> {
 
     setState(() {
       if (position != null) {
+        _showPassengerMarker(position);
 
+        CameraPosition cameraPosition = CameraPosition(
+            target: LatLng(position.latitude, position.longitude), zoom: 19);
+        _moveCamera(cameraPosition);
       }
     });
   }
@@ -217,19 +225,19 @@ class _PanelPassengerState extends State<PanelPassenger> {
       _callUber();
     });
 
-    Position position = Position(
-        longitude: _passengerLocation.longitude,
-        latitude: _passengerLocation.latitude,
-        timestamp: DateTime.now(),
-        accuracy: 0.0,
-        altitude: 0.0,
-        heading: 0.0,
-        speed: 0.0,
-        speedAccuracy: 0.0);
-    _showPassengerMarker(position);
-    CameraPosition cameraPosition = CameraPosition(
-        target: LatLng(position.latitude, position.longitude), zoom: 19);
-    _moveCamera(cameraPosition);
+    // Position position = Position(
+    //     longitude: _passengerLocation.longitude,
+    //     latitude: _passengerLocation.latitude,
+    //     timestamp: DateTime.now(),
+    //     accuracy: 0.0,
+    //     altitude: 0.0,
+    //     heading: 0.0,
+    //     speed: 0.0,
+    //     speedAccuracy: 0.0);
+    // _showPassengerMarker(position);
+    // CameraPosition cameraPosition = CameraPosition(
+    //     target: LatLng(position.latitude, position.longitude), zoom: 19);
+    // _moveCamera(cameraPosition);
   }
 
   _statusWaiting() {
@@ -269,19 +277,28 @@ class _PanelPassengerState extends State<PanelPassenger> {
     if (documentSnapshot.data() != null) {
       Map<String, dynamic> data = documentSnapshot.data()!;
       _idRequisition = data['id_requisition'];
-      _addRequisitionListener(_idRequisition);
+      // _addRequisitionListener(_idRequisition);
+      _addRequisitionListener();
     } else {
       _statusUberNotCalled();
     }
   }
 
-  _addRequisitionListener(String idRequisition) async {
+  // _addRequisitionListener(String idRequisition) async {
+    _addRequisitionListener() async {
+    User firebaseUser = FirebaseUser.getCurrentUsser();
+
     FirebaseFirestore db = FirebaseFirestore.instance;
     db
         .collection('active_requisition')
-        .doc(idRequisition)
+        .doc(firebaseUser.uid)
         .snapshots()
         .listen((snapshot) {
+    // db
+    //     .collection('active_requisition')
+    //     .doc(idRequisition)
+    //     .snapshots()
+    //     .listen((snapshot) {
       /*
     Caso tenha uma requisicao ativa
       -> Alterar interface de acordo com status
@@ -309,6 +326,9 @@ class _PanelPassengerState extends State<PanelPassenger> {
           case StatusRequisition.CANCELED:
             break;
         }
+
+      } else {
+        _statusUberNotCalled();
       }
     });
   }
@@ -316,10 +336,11 @@ class _PanelPassengerState extends State<PanelPassenger> {
   @override
   initState() {
     super.initState();
-    _getActiveRequisition();
-    // _getLastLocationKnown();
+    // _getActiveRequisition();
+    _getLastLocationKnown();
     _addLocationListener();
 
+    _addRequisitionListener();
     _statusUberNotCalled();
   }
 
