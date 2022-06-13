@@ -31,7 +31,7 @@ class _RideState extends State<Ride> {
   String _textButton = 'Aceitar corrida';
   Color _buttonColor = const Color(0xff1ebbd8);
   VoidCallback _buttonFunction = () {};
-  late String _statusMessage;
+  late String _statusMessage = '';
 
   _setMainButton(String text, Color color, VoidCallback function) {
     setState(() {
@@ -45,18 +45,20 @@ class _RideState extends State<Ride> {
     _controller.complete(controller);
   }
 
-  _addLocationListener() {
+  _addLocationListener() async {
     const locationSettings =
         LocationSettings(accuracy: LocationAccuracy.high, distanceFilter: 10);
     Geolocator.getPositionStream(locationSettings: locationSettings)
         .listen((Position position) {
+          print(position.toString());
           _showPassengerMarker(position);
 
           _cameraPosition = CameraPosition(
               target: LatLng(position.latitude, position.longitude),
             zoom: 19
           );
-          _moveCamera(_cameraPosition);
+
+          // _moveCamera(_cameraPosition);
 
       setState(() {
         _driversLocal = position;
@@ -65,6 +67,7 @@ class _RideState extends State<Ride> {
   }
 
   _getLastLocationKnown() async {
+    LocationPermission permission = await Geolocator.requestPermission();
     Position? position = await Geolocator.getLastKnownPosition();
 
     setState(() {
@@ -189,30 +192,30 @@ class _RideState extends State<Ride> {
     _showTwoMarkers(LatLng(driverLatitude, driverLongitude),
         LatLng(passengerLatitude, passengerLongitude));
 
-    // late double northEastLatitude,
-    //     northEastLongitude,
-    //     southWestLatitude,
-    //     southWestLongitude;
-    //
-    // if (driverLatitude <= passengerLatitude) {
-    //   southWestLatitude = driverLatitude;
-    //   northEastLatitude = passengerLatitude;
-    // } else {
-    //   southWestLatitude = passengerLatitude;
-    //   northEastLatitude = driverLatitude;
-    // }
-    //
-    // if (driverLongitude <= passengerLongitude) {
-    //   southWestLongitude = driverLongitude;
-    //   northEastLongitude = passengerLongitude;
-    // } else {
-    //   southWestLongitude = driverLongitude;
-    //   northEastLongitude = passengerLongitude;
-    // }
-    //
-    // _moveCameraUsingBounds(LatLngBounds(
-    //     southwest: LatLng(southWestLatitude, southWestLongitude),
-    //     northeast: LatLng(northEastLatitude, northEastLongitude)));
+    late double northEastLatitude,
+        northEastLongitude,
+        southWestLatitude,
+        southWestLongitude;
+
+    if (driverLatitude <= passengerLatitude) {
+      southWestLatitude = driverLatitude;
+      northEastLatitude = passengerLatitude;
+    } else {
+      southWestLatitude = passengerLatitude;
+      northEastLatitude = driverLatitude;
+    }
+
+    if (driverLongitude <= passengerLongitude) {
+      southWestLongitude = driverLongitude;
+      northEastLongitude = passengerLongitude;
+    } else {
+      southWestLongitude = driverLongitude;
+      northEastLongitude = passengerLongitude;
+    }
+
+    _moveCameraUsingBounds(LatLngBounds(
+        southwest: LatLng(southWestLatitude, southWestLongitude),
+        northeast: LatLng(northEastLatitude, northEastLongitude)));
   }
 
   _startRide() {}
@@ -237,8 +240,9 @@ class _RideState extends State<Ride> {
           markerId: const MarkerId('marcador-motorista'),
           position: LatLng(driverPosition.latitude, driverPosition.longitude),
           infoWindow: const InfoWindow(title: 'Meu local'),
-          // icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen)
-          icon: iconLocation);
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen)
+          // icon: iconLocation
+      );
       listMarkers.add(driverMarker);
     });
 
@@ -252,17 +256,14 @@ class _RideState extends State<Ride> {
           position:
               LatLng(passengerPosition.latitude, passengerPosition.longitude),
           infoWindow: const InfoWindow(title: 'Meu local'),
-          // icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue)
-          icon: iconLocation);
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue)
+          // icon: iconLocation
+      );
       listMarkers.add(passengerMarker);
     });
 
     setState(() {
       _markers = listMarkers;
-      _moveCamera(CameraPosition(
-          target: LatLng(driverPosition.latitude, driverPosition.longitude),
-        zoom: 18
-      ));
     });
   }
 

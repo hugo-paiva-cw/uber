@@ -12,8 +12,8 @@ class Register extends StatefulWidget {
 
 class _RegisterState extends State<Register> {
 
-  final TextEditingController _controllerName = TextEditingController(text: 'Hugo Paiva');
-  final TextEditingController _controllerEmail = TextEditingController(text: 'hugo@gmail.com');
+  final TextEditingController _controllerName = TextEditingController(text: 'Hugo Sousa');
+  final TextEditingController _controllerEmail = TextEditingController(text: 'hugo.motorista@gmail.com');
   final TextEditingController _controllerPassword = TextEditingController(text: 'cueiozim');
   bool _typeUser = false;
   String _errorMessage = '';
