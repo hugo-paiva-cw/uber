@@ -81,15 +81,9 @@ class _PanelPassengerState extends State<PanelPassenger> {
   _getLastLocationKnown() async {
     Position? position = await Geolocator.getLastKnownPosition();
 
-    setState(() {
       if (position != null) {
-        _showPassengerMarker(position);
 
-        CameraPosition cameraPosition = CameraPosition(
-            target: LatLng(position.latitude, position.longitude), zoom: 19);
-        _moveCamera(cameraPosition);
       }
-    });
   }
 
   void _getLocationPermissions() async {
@@ -305,34 +299,30 @@ class _PanelPassengerState extends State<PanelPassenger> {
     User firebaseUser = FirebaseUser.getCurrentUsser();
 
     FirebaseFirestore db = FirebaseFirestore.instance;
-    DocumentSnapshot<Map<String, dynamic>> documentSnapshot =
-        await db.collection('active_requisition').doc(firebaseUser.uid).get();
+    DocumentSnapshot<Map<String, dynamic>> documentSnapshot = await db
+            .collection('active_requisition')
+            .doc(firebaseUser.uid)
+            .get();
 
     if (documentSnapshot.data() != null) {
+
       Map<String, dynamic> data = documentSnapshot.data()!;
       _idRequisition = data['id_requisition'];
-      // _addRequisitionListener(_idRequisition);
-      _addRequisitionListener();
+      _addRequisitionListener(_idRequisition);
+
     } else {
       _statusUberNotCalled();
     }
   }
 
-  // _addRequisitionListener(String idRequisition) async {
-    _addRequisitionListener() async {
-    User firebaseUser = FirebaseUser.getCurrentUsser();
+  _addRequisitionListener(String idRequisition) async {
 
     FirebaseFirestore db = FirebaseFirestore.instance;
     db
-        .collection('active_requisition')
-        .doc(firebaseUser.uid)
+        .collection('requisitions')
+        .doc(idRequisition)
         .snapshots()
         .listen((snapshot) {
-    // db
-    //     .collection('active_requisition')
-    //     .doc(idRequisition)
-    //     .snapshots()
-    //     .listen((snapshot) {
       /*
     Caso tenha uma requisicao ativa
       -> Alterar interface de acordo com status
@@ -361,8 +351,6 @@ class _PanelPassengerState extends State<PanelPassenger> {
             break;
         }
 
-      } else {
-        _statusUberNotCalled();
       }
     });
   }
@@ -370,11 +358,15 @@ class _PanelPassengerState extends State<PanelPassenger> {
   @override
   initState() {
     super.initState();
+    //User for requesting permission for location services
     _getLocationPermissions();
-    _getLastLocationKnown();
+
+    _getActiveRequisition();
+
+    // _getLastLocationKnown();
     _addLocationListener();
 
-    _addRequisitionListener();
+    // _addRequisitionListener();
     _statusUberNotCalled();
   }
 

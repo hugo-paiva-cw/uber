@@ -24,8 +24,7 @@ class _RideState extends State<Ride> {
     target: LatLng(-23.563999, -46.653256),
   );
   late Set<Marker> _markers = {};
-  late Map? _requisitionData;
-  late Position _driversLocal;
+  Map? _requisitionData = {};
 
   // Controls for screen exibition
   String _textButton = 'Aceitar corrida';
@@ -50,19 +49,11 @@ class _RideState extends State<Ride> {
         LocationSettings(accuracy: LocationAccuracy.high, distanceFilter: 10);
     Geolocator.getPositionStream(locationSettings: locationSettings)
         .listen((Position position) {
-          print(position.toString());
-          _showPassengerMarker(position);
 
-          _cameraPosition = CameraPosition(
-              target: LatLng(position.latitude, position.longitude),
-            zoom: 19
-          );
+      if (position != null) {
 
-          // _moveCamera(_cameraPosition);
+      }
 
-      setState(() {
-        _driversLocal = position;
-      });
     });
   }
 
@@ -70,16 +61,14 @@ class _RideState extends State<Ride> {
     LocationPermission permission = await Geolocator.requestPermission();
     Position? position = await Geolocator.getLastKnownPosition();
 
-    setState(() {
       if (position != null) {
-        _showPassengerMarker(position);
-
-        _cameraPosition = CameraPosition(
-            target: LatLng(position.latitude, position.longitude), zoom: 19);
-        // _moveCamera(_cameraPosition);
-        _driversLocal = position;
+        // _showMarker(position);
+        //
+        // _cameraPosition = CameraPosition(
+        //     target: LatLng(position.latitude, position.longitude), zoom: 19);
+        // // _moveCamera(_cameraPosition);
+        // _driversLocal = position;
       }
-    });
   }
 
   _moveCamera(CameraPosition cameraPosition) async {
@@ -88,18 +77,18 @@ class _RideState extends State<Ride> {
         .animateCamera(CameraUpdate.newCameraPosition(cameraPosition));
   }
 
-  _showPassengerMarker(Position local) async {
+  _showMarker(Position local, String icon, String infoWindow) async {
     double pixelRatio = MediaQuery.of(context).devicePixelRatio;
 
     BitmapDescriptor.fromAssetImage(
             ImageConfiguration(devicePixelRatio: pixelRatio),
-            '/assets/images/motorista.png')
-        .then((BitmapDescriptor iconLocation) {
+            icon)
+        .then((BitmapDescriptor bitmapDescriptor) {
       Marker passengerMarker = Marker(
-          markerId: const MarkerId('marcador-motorista'),
+          markerId: MarkerId(icon),
           position: LatLng(local.latitude, local.longitude),
-          infoWindow: const InfoWindow(title: 'Meu local'),
-          icon: iconLocation);
+          infoWindow: InfoWindow(title: infoWindow),
+          icon: bitmapDescriptor);
 
       setState(() {
         _markers.add(passengerMarker);
@@ -119,8 +108,9 @@ class _RideState extends State<Ride> {
   }
 
   _addRequisitionListener() async {
+    LocationPermission permission = await Geolocator.requestPermission();
     FirebaseFirestore db = FirebaseFirestore.instance;
-    String idRequisition = _requisitionData?['id'];
+    String? idRequisition = _requisitionData?['id'];
     db
         .collection('requisitions')
         .doc(idRequisition)
@@ -156,32 +146,35 @@ class _RideState extends State<Ride> {
       _acceptRide();
     });
 
-    // double driverLatitude = _requisitionData?['driver']['latitude'];
-    // double driverLongitude = _requisitionData?['driver']['longitude'];
-    //
-    // Position position = Position(
-    //     longitude: driverLongitude,
-    //     latitude: driverLatitude,
-    //     timestamp: DateTime.now(),
-    //     accuracy: 0.0,
-    //     altitude: 0.0,
-    //     heading: 0.0,
-    //     speed: 0.0,
-    //     speedAccuracy: 0.0);
-    // _showPassengerMarker(position);
-    //
-    // _cameraPosition = CameraPosition(
-    //     target: LatLng(position.latitude, position.longitude), zoom: 19);
-    // _moveCamera(_cameraPosition);
+    double driverLatitude = _requisitionData?['driver']['latitude'];
+    double driverLongitude = _requisitionData?['driver']['longitude'];
+
+    Position position = Position(
+        longitude: driverLongitude,
+        latitude: driverLatitude,
+        timestamp: DateTime.now(),
+        accuracy: 0.0,
+        altitude: 0.0,
+        heading: 0.0,
+        speed: 0.0,
+        speedAccuracy: 0.0);
+    _showMarker(
+      position,
+      '/assets/images/motorista.png',
+      'Motorista'
+    );
+
+    CameraPosition cameraPosition = CameraPosition(
+        target: LatLng(position.latitude, position.longitude), zoom: 19);
+    _moveCamera(cameraPosition);
   }
 
   _statusOnTheWay() {
     _statusMessage = 'A caminho do passageiro';
 
-    // _setMainButton('Iniciar corrida', const Color(0xff1ebbd8), () {
-    //   _startRide();
-    // });
-    _setMainButton('A caminho do passageiro', Colors.grey, () {});
+    _setMainButton('Iniciar corrida', const Color(0xff1ebbd8), () {
+      _startRide();
+    });
 
     double passengerLatitude = _requisitionData?['passenger']['latitude'];
     double passengerLongitude = _requisitionData?['passenger']['longitude'];
@@ -268,10 +261,11 @@ class _RideState extends State<Ride> {
   }
 
   _acceptRide() async {
+
     // Get driver's data
     new_user.User? driver = await FirebaseUser.getLoggedUserData();
-    driver?.latitude = _driversLocal.latitude;
-    driver?.longitude = _driversLocal.longitude;
+    driver?.latitude = _requisitionData?['driver']['latitude'];
+    driver?.longitude = _requisitionData?['driver']['longitude'];
 
     FirebaseFirestore db = FirebaseFirestore.instance;
     String idRequisition = _requisitionData?['id'];
@@ -298,11 +292,12 @@ class _RideState extends State<Ride> {
   @override
   initState() {
     super.initState();
-    _getLastLocationKnown();
+    _addRequisitionListener();
+
+    // _getLastLocationKnown();
     _addLocationListener();
 
-    _getRequisition();
-    // _addRequisitionListener();
+    // _getRequisition();
   }
 
   @override
