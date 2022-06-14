@@ -20,21 +20,32 @@ class PanelPassenger extends StatefulWidget {
 }
 
 class _PanelPassengerState extends State<PanelPassenger> {
-  final TextEditingController _controllerDestiny = TextEditingController();
+  final TextEditingController _controllerDestiny = TextEditingController(text: 'av. paulista');
   List<String> menuItems = ['Configurações', 'Deslogar'];
   final Completer<GoogleMapController> _controller = Completer();
   late CameraPosition _cameraPosition = const CameraPosition(
     target: LatLng(-23.563999, -46.653256),
   );
   final Set<Marker> _markers = {};
-  late String _idRequisition;
-  late Position _passengerLocation;
+  String? _idRequisition = '';
+  Position _passengerLocation = Position(
+      longitude: -16,
+      latitude: -48,
+      timestamp: DateTime.now(),
+      accuracy: 0.0,
+      altitude: 0.0,
+      heading: 0.0,
+      speed: 0.0,
+      speedAccuracy: 0.0);
+
+  Map<String, dynamic> _requisitionData = {};
+  // late Map _requisitionData;
 
   // Controls for screen exibition
   bool _showDestinyAddressBox = true;
   String _textButton = 'Chamar Uber';
   Color _buttonColor = const Color(0xff1ebbd8);
-  late VoidCallback _buttonFunction;
+  VoidCallback _buttonFunction = () {};
 
   _signOutUser() {
     FirebaseAuth auth = FirebaseAuth.instance;
@@ -63,27 +74,23 @@ class _PanelPassengerState extends State<PanelPassenger> {
         LocationSettings(accuracy: LocationAccuracy.high, distanceFilter: 10);
     Geolocator.getPositionStream(locationSettings: locationSettings)
         .listen((Position position) {
-      _showPassengerMarker(position);
-
-      CameraPosition cameraPosition = CameraPosition(
-          target: LatLng(position.latitude, position.longitude), zoom: 19);
-      _moveCamera(cameraPosition);
-
-      if (position != null) {
+      if (_idRequisition != null && _idRequisition!.isNotEmpty) {
+        // Update passenger location
+        FirebaseUser.updateLocationData(
+            _idRequisition!, position.latitude, position.longitude);
+      } else if (position != null) {
+        print('to posicionando');
         setState(() {
           _passengerLocation = position;
         });
       }
-
     });
   }
 
   _getLastLocationKnown() async {
     Position? position = await Geolocator.getLastKnownPosition();
 
-      if (position != null) {
-
-      }
+    if (position != null) {}
   }
 
   void _getLocationPermissions() async {
@@ -222,7 +229,7 @@ class _PanelPassengerState extends State<PanelPassenger> {
 
     FirebaseFirestore db = FirebaseFirestore.instance;
 
-    db.collection('requisitions').doc(requisition.id).set(requisition.toMap());
+    await db.collection('requisitions').doc(requisition.id).set(requisition.toMap());
 
     // save active requisition
     Map<String, dynamic> activeRequisitionData = {};
@@ -230,7 +237,7 @@ class _PanelPassengerState extends State<PanelPassenger> {
     activeRequisitionData['id_user'] = passenger.idUser;
     activeRequisitionData['status'] = StatusRequisition.WAITING;
 
-    db
+    await db
         .collection('active_requisition')
         .doc(passenger.idUser)
         .set(activeRequisitionData);
@@ -253,19 +260,19 @@ class _PanelPassengerState extends State<PanelPassenger> {
       _callUber();
     });
 
-    // Position position = Position(
-    //     longitude: _passengerLocation.longitude,
-    //     latitude: _passengerLocation.latitude,
-    //     timestamp: DateTime.now(),
-    //     accuracy: 0.0,
-    //     altitude: 0.0,
-    //     heading: 0.0,
-    //     speed: 0.0,
-    //     speedAccuracy: 0.0);
-    // _showPassengerMarker(position);
-    // CameraPosition cameraPosition = CameraPosition(
-    //     target: LatLng(position.latitude, position.longitude), zoom: 19);
-    // _moveCamera(cameraPosition);
+    Position position = Position(
+        longitude: _passengerLocation.longitude,
+        latitude: _passengerLocation.latitude,
+        timestamp: DateTime.now(),
+        accuracy: 0.0,
+        altitude: 0.0,
+        heading: 0.0,
+        speed: 0.0,
+        speedAccuracy: 0.0);
+    _showPassengerMarker(position);
+    CameraPosition cameraPosition = CameraPosition(
+        target: LatLng(position.latitude, position.longitude), zoom: 19);
+    _moveCamera(cameraPosition);
   }
 
   _statusWaiting() {
@@ -275,6 +282,24 @@ class _PanelPassengerState extends State<PanelPassenger> {
       _cancelUber();
     });
 
+    print('o requisition é $_requisitionData');
+    double passengerLatitude = _requisitionData['passenger']['latitude'];
+    double passengerLongitude = _requisitionData['passenger']['longitude'];
+
+    Position position = Position(
+        longitude: passengerLatitude,
+        latitude: passengerLongitude,
+        timestamp: DateTime.now(),
+        accuracy: 0.0,
+        altitude: 0.0,
+        heading: 0.0,
+        speed: 0.0,
+        speedAccuracy: 0.0);
+    _showPassengerMarker(position);
+    CameraPosition cameraPosition = CameraPosition(
+        target: LatLng(position.latitude, position.longitude), zoom: 19);
+    _moveCamera(cameraPosition);
+    print('movi a camera no waiting');
   }
 
   _statusOnTheWay() {
@@ -285,12 +310,14 @@ class _PanelPassengerState extends State<PanelPassenger> {
 
   _cancelUber() {
     User firebaseUser = FirebaseUser.getCurrentUsser();
+    print('O id da requisiçao é ${_idRequisition}');
 
     FirebaseFirestore db = FirebaseFirestore.instance;
     db
         .collection('requisitions')
         .doc(_idRequisition)
         .update({'status': StatusRequisition.CANCELED}).then((_) {
+          print('FirebaseUser uid ${firebaseUser.uid}');
       db.collection('active_requisition').doc(firebaseUser.uid).delete();
     });
   }
@@ -299,24 +326,22 @@ class _PanelPassengerState extends State<PanelPassenger> {
     User firebaseUser = FirebaseUser.getCurrentUsser();
 
     FirebaseFirestore db = FirebaseFirestore.instance;
-    DocumentSnapshot<Map<String, dynamic>> documentSnapshot = await db
-            .collection('active_requisition')
-            .doc(firebaseUser.uid)
-            .get();
+    DocumentSnapshot<Map<String, dynamic>> documentSnapshot =
+        await db.collection('active_requisition').doc(firebaseUser.uid).get();
 
     if (documentSnapshot.data() != null) {
-
       Map<String, dynamic> data = documentSnapshot.data()!;
-      _idRequisition = data['id_requisition'];
-      _addRequisitionListener(_idRequisition);
-
+      setState(() {
+        _idRequisition = data['id_requisition'];
+      });
+      print('Numero um ${_idRequisition}');
+      _addRequisitionListener(_idRequisition!);
     } else {
       _statusUberNotCalled();
     }
   }
 
   _addRequisitionListener(String idRequisition) async {
-
     FirebaseFirestore db = FirebaseFirestore.instance;
     db
         .collection('requisitions')
@@ -331,10 +356,11 @@ class _PanelPassengerState extends State<PanelPassenger> {
      */
 
       if (snapshot.data() != null) {
-
         Map<String, dynamic> data = snapshot.data()!;
+        _requisitionData = data;
+        print('dados de requisicao sao ${_requisitionData}');
         String status = data['status'];
-        _idRequisition = data['id_requisition'];
+        _idRequisition = data['id'];
 
         switch (status) {
           case StatusRequisition.WAITING:
@@ -350,7 +376,6 @@ class _PanelPassengerState extends State<PanelPassenger> {
           case StatusRequisition.CANCELED:
             break;
         }
-
       }
     });
   }
@@ -362,12 +387,12 @@ class _PanelPassengerState extends State<PanelPassenger> {
     _getLocationPermissions();
 
     _getActiveRequisition();
-
-    // _getLastLocationKnown();
     _addLocationListener();
 
+    // _getLastLocationKnown();
+
     // _addRequisitionListener();
-    _statusUberNotCalled();
+    // _statusUberNotCalled();
   }
 
   @override

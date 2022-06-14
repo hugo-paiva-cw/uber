@@ -44,6 +44,7 @@ class FirebaseUser {
     driver?.latitude = latitude;
     driver?.longitude = longitude;
 
+    print('driver to map ');
     db.collection('requisitions')
     .doc(idRequisition)
     .update({

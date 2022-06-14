@@ -25,6 +25,9 @@ class _RideState extends State<Ride> {
   );
   late Set<Marker> _markers = {};
   Map? _requisitionData = {};
+  late String? _idRequisition;
+  late Position _driverLocation;
+  String _statusRequisition = StatusRequisition.WAITING;
 
   // Controls for screen exibition
   String _textButton = 'Aceitar corrida';
@@ -52,6 +55,20 @@ class _RideState extends State<Ride> {
 
       if (position != null) {
 
+        if (_idRequisition != null && _idRequisition!.isNotEmpty) {
+
+          if (_statusRequisition != StatusRequisition.WAITING) {
+            // Update passenger location
+            FirebaseUser.updateLocationData(
+                _idRequisition!, position.latitude, position.longitude);
+
+          }
+        } else if (position != null) {
+          print('to posicionando');
+          setState(() {
+            _driverLocation = position;
+          });
+        }
       }
 
     });
@@ -110,19 +127,18 @@ class _RideState extends State<Ride> {
   _addRequisitionListener() async {
     LocationPermission permission = await Geolocator.requestPermission();
     FirebaseFirestore db = FirebaseFirestore.instance;
-    String? idRequisition = _requisitionData?['id'];
     db
         .collection('requisitions')
-        .doc(idRequisition)
+        .doc(_idRequisition)
         .snapshots()
         .listen((snapshot) {
       if (snapshot.data() != null) {
         _requisitionData = snapshot.data();
 
         Map<String, dynamic> data = snapshot.data()!;
-        String status = data['status'];
+        _statusRequisition = data['status'];
 
-        switch (status) {
+        switch (_statusRequisition) {
           case StatusRequisition.WAITING:
             _statusWaiting();
             break;
@@ -146,8 +162,8 @@ class _RideState extends State<Ride> {
       _acceptRide();
     });
 
-    double driverLatitude = _requisitionData?['driver']['latitude'];
-    double driverLongitude = _requisitionData?['driver']['longitude'];
+    double driverLatitude = _driverLocation.latitude;
+    double driverLongitude = _driverLocation.longitude;
 
     Position position = Position(
         longitude: driverLongitude,
@@ -292,6 +308,8 @@ class _RideState extends State<Ride> {
   @override
   initState() {
     super.initState();
+
+    _idRequisition = widget.idRequisition;
     _addRequisitionListener();
 
     // _getLastLocationKnown();
