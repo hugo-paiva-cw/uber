@@ -52,25 +52,21 @@ class _RideState extends State<Ride> {
         LocationSettings(accuracy: LocationAccuracy.high, distanceFilter: 10);
     Geolocator.getPositionStream(locationSettings: locationSettings)
         .listen((Position position) {
-
       if (position != null) {
-
         if (_idRequisition != null && _idRequisition!.isNotEmpty) {
-
           if (_statusRequisition != StatusRequisition.WAITING) {
             // Update passenger location
             FirebaseUser.updateLocationData(
                 _idRequisition!, position.latitude, position.longitude);
-
+          } else {
+            print('to posicionando');
+            setState(() {
+              _driverLocation = position;
+            });
+            _statusWaiting();
           }
-        } else if (position != null) {
-          print('to posicionando');
-          setState(() {
-            _driverLocation = position;
-          });
         }
       }
-
     });
   }
 
@@ -78,14 +74,14 @@ class _RideState extends State<Ride> {
     LocationPermission permission = await Geolocator.requestPermission();
     Position? position = await Geolocator.getLastKnownPosition();
 
-      if (position != null) {
-        // _showMarker(position);
-        //
-        // _cameraPosition = CameraPosition(
-        //     target: LatLng(position.latitude, position.longitude), zoom: 19);
-        // // _moveCamera(_cameraPosition);
-        // _driversLocal = position;
-      }
+    if (position != null) {
+      // _showMarker(position);
+      //
+      // _cameraPosition = CameraPosition(
+      //     target: LatLng(position.latitude, position.longitude), zoom: 19);
+      // // _moveCamera(_cameraPosition);
+      // _driversLocal = position;
+    }
   }
 
   _moveCamera(CameraPosition cameraPosition) async {
@@ -98,8 +94,7 @@ class _RideState extends State<Ride> {
     double pixelRatio = MediaQuery.of(context).devicePixelRatio;
 
     BitmapDescriptor.fromAssetImage(
-            ImageConfiguration(devicePixelRatio: pixelRatio),
-            icon)
+            ImageConfiguration(devicePixelRatio: pixelRatio), icon)
         .then((BitmapDescriptor bitmapDescriptor) {
       Marker passengerMarker = Marker(
           markerId: MarkerId(icon),
@@ -162,27 +157,28 @@ class _RideState extends State<Ride> {
       _acceptRide();
     });
 
-    double driverLatitude = _driverLocation.latitude;
-    double driverLongitude = _driverLocation.longitude;
+    print('before');
+    if (_driverLocation != null ) {
+      print('after');
+      double driverLatitude = _driverLocation.latitude;
+      double driverLongitude = _driverLocation.longitude;
 
-    Position position = Position(
-        longitude: driverLongitude,
-        latitude: driverLatitude,
-        timestamp: DateTime.now(),
-        accuracy: 0.0,
-        altitude: 0.0,
-        heading: 0.0,
-        speed: 0.0,
-        speedAccuracy: 0.0);
-    _showMarker(
-      position,
-      '/assets/images/motorista.png',
-      'Motorista'
-    );
+      Position position = Position(
+          longitude: driverLongitude,
+          latitude: driverLatitude,
+          timestamp: DateTime.now(),
+          accuracy: 0.0,
+          altitude: 0.0,
+          heading: 0.0,
+          speed: 0.0,
+          speedAccuracy: 0.0);
+      _showMarker(position, '/assets/images/motorista.png', 'Motorista');
 
-    CameraPosition cameraPosition = CameraPosition(
-        target: LatLng(position.latitude, position.longitude), zoom: 19);
-    _moveCamera(cameraPosition);
+      CameraPosition cameraPosition = CameraPosition(
+          target: LatLng(position.latitude, position.longitude), zoom: 19);
+      _moveCamera(cameraPosition);
+    }
+
   }
 
   _statusOnTheWay() {
@@ -227,7 +223,29 @@ class _RideState extends State<Ride> {
         northeast: LatLng(northEastLatitude, northEastLongitude)));
   }
 
-  _startRide() {}
+  _startRide() {
+    FirebaseFirestore db = FirebaseFirestore.instance;
+    db.collection('requisitions').doc(_idRequisition).update({
+      'origin': {
+        'latitude': _requisitionData!['driver']['latitude'],
+        'longitude': _requisitionData!['driver']['longitude'],
+      },
+      'status': StatusRequisition.TRIP
+    });
+
+    String idPassenger = _requisitionData?['passenger']['idUser'];
+    db
+        .collection('active_requisition')
+        .doc(idPassenger)
+        .update({'status': StatusRequisition.TRIP});
+
+    String idDriver = _requisitionData?['driver']['idUser'];
+    db
+        .collection('active_requisition')
+        .doc(idDriver)
+        .update({'status': StatusRequisition.TRIP});
+    print('errei sera');
+  }
 
   _moveCameraUsingBounds(LatLngBounds latLngBounds) async {
     GoogleMapController googleMapController = await _controller.future;
@@ -249,9 +267,8 @@ class _RideState extends State<Ride> {
           markerId: const MarkerId('marcador-motorista'),
           position: LatLng(driverPosition.latitude, driverPosition.longitude),
           infoWindow: const InfoWindow(title: 'Meu local'),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen)
-          // icon: iconLocation
-      );
+          // icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen)
+          icon: iconLocation);
       listMarkers.add(driverMarker);
     });
 
@@ -265,9 +282,8 @@ class _RideState extends State<Ride> {
           position:
               LatLng(passengerPosition.latitude, passengerPosition.longitude),
           infoWindow: const InfoWindow(title: 'Meu local'),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue)
-          // icon: iconLocation
-      );
+          // icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue)
+          icon: iconLocation);
       listMarkers.add(passengerMarker);
     });
 
@@ -277,11 +293,10 @@ class _RideState extends State<Ride> {
   }
 
   _acceptRide() async {
-
     // Get driver's data
     new_user.User? driver = await FirebaseUser.getLoggedUserData();
-    driver?.latitude = _requisitionData?['driver']['latitude'];
-    driver?.longitude = _requisitionData?['driver']['longitude'];
+    driver?.latitude = _driverLocation.latitude;
+    driver?.longitude = _driverLocation.longitude;
 
     FirebaseFirestore db = FirebaseFirestore.instance;
     String idRequisition = _requisitionData?['id'];
@@ -297,6 +312,7 @@ class _RideState extends State<Ride> {
           .update({'status': StatusRequisition.ONTHEWAY});
 
       String idDriver = driver.idUser;
+      print('id motora $idDriver');
       db.collection('active_requisition_driver').doc(idDriver).set({
         'id_requisition': idRequisition,
         'id_user': idDriver,
