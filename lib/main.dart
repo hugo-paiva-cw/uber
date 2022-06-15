@@ -13,8 +13,8 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
 
-  // FirebaseAuth auth = FirebaseAuth.instance;
-  // auth.signOut();
+  FirebaseAuth auth = FirebaseAuth.instance;
+  auth.signOut();
 
   runApp(MaterialApp(
     title: 'Uber',

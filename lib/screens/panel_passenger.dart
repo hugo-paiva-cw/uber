@@ -43,6 +43,7 @@ class _PanelPassengerState extends State<PanelPassenger> {
   Map<String, dynamic> _requisitionData = {};
   // late Map _requisitionData;
   StreamSubscription<DocumentSnapshot>? _streamSubscriptionRequisitions;
+  late StreamSubscription<Position> _streamLocationListener;
 
   // Controls for screen exibition
   bool _showDestinyAddressBox = true;
@@ -75,12 +76,12 @@ class _PanelPassengerState extends State<PanelPassenger> {
   _addLocationListener() {
     const locationSettings =
         LocationSettings(accuracy: LocationAccuracy.high, distanceFilter: 10);
-    Geolocator.getPositionStream(locationSettings: locationSettings)
+    _streamLocationListener = Geolocator.getPositionStream(locationSettings: locationSettings)
         .listen((Position position) {
       if (_idRequisition != null && _idRequisition!.isNotEmpty) {
         // Update passenger location
         FirebaseUser.updateLocationData(
-            _idRequisition!, position.latitude, position.longitude);
+            _idRequisition!, position.latitude, position.longitude, 'passenger');
       } else {
         print('to posicionando');
         setState(() {
@@ -413,13 +414,31 @@ class _PanelPassengerState extends State<PanelPassenger> {
   _statusConfirmed() {
 
     if (_streamSubscriptionRequisitions != null ) {
-      _streamSubscriptionRequisitions?.cancel();
+      _streamSubscriptionRequisitions!.cancel();
+      _streamSubscriptionRequisitions = null;
     }
 
     _showDestinyAddressBox = true;
     _setMainButton('Chamar Uber', const Color(0xff1ebbd8), () {
       _callUber();
     });
+
+    double passengerLatitude = _requisitionData['passenger']['latitude'];
+    double passengerLongitude = _requisitionData['passenger']['longitude'];
+
+    Position position = Position(
+        longitude: passengerLatitude,
+        latitude: passengerLongitude,
+        timestamp: DateTime.now(),
+        accuracy: 0.0,
+        altitude: 0.0,
+        heading: 0.0,
+        speed: 0.0,
+        speedAccuracy: 0.0);
+    _showPassengerMarker(position);
+    CameraPosition cameraPosition = CameraPosition(
+        target: LatLng(position.latitude, position.longitude), zoom: 19);
+    _moveCamera(cameraPosition);
 
     _requisitionData = {};
 
@@ -546,6 +565,13 @@ class _PanelPassengerState extends State<PanelPassenger> {
           print('FirebaseUser uid ${firebaseUser.uid}');
       db.collection('active_requisition').doc(firebaseUser.uid).delete();
     });
+
+    _statusUberNotCalled();
+
+    if ( _streamSubscriptionRequisitions != null ) {
+      _streamSubscriptionRequisitions!.cancel();
+      _streamSubscriptionRequisitions = null;
+    }
   }
 
   _getActiveRequisition() async {
@@ -740,5 +766,7 @@ class _PanelPassengerState extends State<PanelPassenger> {
   void dispose() {
     super.dispose();
     _streamSubscriptionRequisitions?.cancel();
+    _streamSubscriptionRequisitions = null;
+    _streamLocationListener.cancel();
   }
 }

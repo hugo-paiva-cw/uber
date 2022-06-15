@@ -37,18 +37,19 @@ class FirebaseUser {
       return newUser;
   }
 
-  static updateLocationData(String idRequisition, double latitude, double longitude) async {
+  static updateLocationData(String idRequisition, double latitude, double longitude, String type) async {
 
     FirebaseFirestore db = FirebaseFirestore.instance;
-    new_user.User? driver = await getLoggedUserData();
-    driver?.latitude = latitude;
-    driver?.longitude = longitude;
+    new_user.User? user = await getLoggedUserData();
+    user?.latitude = latitude;
+    user?.longitude = longitude;
 
-    print('driver to map ');
+    print('user to map ');
+    print('valor de user é ${user?.toMap()}');
     db.collection('requisitions')
     .doc(idRequisition)
     .update({
-      'driver': driver?.toMap()
+      '${type}': user?.toMap()
     });
 
   }

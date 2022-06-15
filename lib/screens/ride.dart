@@ -21,9 +21,7 @@ class Ride extends StatefulWidget {
 
 class _RideState extends State<Ride> {
   final Completer<GoogleMapController> _controller = Completer();
-  final CameraPosition _cameraPosition = const CameraPosition(
-    target: LatLng(-23.563999, -46.653256),
-  );
+  CameraPosition _cameraPosition = CameraPosition(target: LatLng(-23.5, -46.6));
   Set<Marker> _markers = {};
   Map? _requisitionData = {};
   String? _idRequisition;
@@ -56,9 +54,9 @@ class _RideState extends State<Ride> {
         .listen((Position position) {
         if (_idRequisition != null && _idRequisition!.isNotEmpty) {
           if (_statusRequisition != StatusRequisition.WAITING) {
-            // Update passenger location
+            // Update driver location
             FirebaseUser.updateLocationData(
-                _idRequisition!, position.latitude, position.longitude);
+                _idRequisition!, position.latitude, position.longitude, 'driver');
           } else {
             print('to posicionando');
             setState(() {
@@ -75,12 +73,7 @@ class _RideState extends State<Ride> {
     Position? position = await Geolocator.getLastKnownPosition();
 
     if (position != null) {
-      // _showMarker(position);
-      //
-      // _cameraPosition = CameraPosition(
-      //     target: LatLng(position.latitude, position.longitude), zoom: 19);
-      // // _moveCamera(_cameraPosition);
-      // _driversLocal = position;
+      _driverLocation = position;
     }
   }
 
@@ -242,12 +235,14 @@ class _RideState extends State<Ride> {
         .collection('active_requisition')
         .doc(idPassenger)
         .update({'status': StatusRequisition.FINALIZED});
+    print('teste status finalized user');
 
     String idDriver = _requisitionData?['driver']['idUser'];
     db
         .collection('active_requisition_driver')
         .doc(idDriver)
         .update({'status': StatusRequisition.FINALIZED});
+    print('teste status finalized user');
 
   }
 
@@ -376,11 +371,15 @@ class _RideState extends State<Ride> {
       'status': StatusRequisition.TRIP
     });
 
+
+    print('antes da req trip');
     String idPassenger = _requisitionData?['passenger']['idUser'];
     db
         .collection('active_requisition')
         .doc(idPassenger)
-        .update({'status': StatusRequisition.TRIP});
+        .update({'status': StatusRequisition.TRIP}).then((value) =>
+        print('teste status trip user')
+);
 
     String idDriver = _requisitionData?['driver']['idUser'];
     db
@@ -451,6 +450,7 @@ class _RideState extends State<Ride> {
         'status': StatusRequisition.ONTHEWAY
       }).then((_) {
         String idPassenger = _requisitionData?['passenger']['idUser'];
+        print('a id do passageiro é $idPassenger');
         db
             .collection('active_requisition')
             .doc(idPassenger)
@@ -474,7 +474,7 @@ class _RideState extends State<Ride> {
     _idRequisition = widget.idRequisition;
     _addRequisitionListener();
 
-    // _getLastLocationKnown();
+    _getLastLocationKnown();
     _addLocationListener();
 
     // _getRequisition();
@@ -492,7 +492,6 @@ class _RideState extends State<Ride> {
             initialCameraPosition: _cameraPosition,
             mapType: MapType.normal,
             onMapCreated: _onMapCreated,
-            // myLocationEnabled: true,
             myLocationButtonEnabled: false,
             markers: _markers,
           ),
