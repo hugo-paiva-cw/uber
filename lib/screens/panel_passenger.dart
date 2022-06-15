@@ -24,7 +24,7 @@ class _PanelPassengerState extends State<PanelPassenger> {
   final TextEditingController _controllerDestiny = TextEditingController(text: 'av. paulista');
   List<String> menuItems = ['Configurações', 'Deslogar'];
   final Completer<GoogleMapController> _controller = Completer();
-  late CameraPosition _cameraPosition = const CameraPosition(
+  final CameraPosition _cameraPosition = const CameraPosition(
     target: LatLng(-23.563999, -46.653256),
   );
   Set<Marker> _markers = {};
