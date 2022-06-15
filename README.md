@@ -1,6 +1,7 @@
 # uber
 
-A new Flutter project.
+13th exercise-app with the objective of reproducing Uber interface and functionality
+
 
 ## Getting Started
 

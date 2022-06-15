@@ -22,6 +22,7 @@ class PanelPassenger extends StatefulWidget {
 }
 
 class _PanelPassengerState extends State<PanelPassenger> {
+
   final TextEditingController _controllerDestiny =
       TextEditingController(text: 'av. paulista');
   List<String> menuItems = ['Configurações', 'Deslogar'];
@@ -549,12 +550,6 @@ class _PanelPassengerState extends State<PanelPassenger> {
         .doc(idRequisition)
         .snapshots()
         .listen((snapshot) {
-      /*
-    Caso tenha uma requisicao ativa
-      -> Alterar interface de acordo com status
-    Caso não tenha
-      -> Exibe interface padrão para chamar uber
-     */
 
       if (snapshot.data() != null) {
         Map<String, dynamic> data = snapshot.data()!;
