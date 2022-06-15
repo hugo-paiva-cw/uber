@@ -44,12 +44,10 @@ class FirebaseUser {
     user?.latitude = latitude;
     user?.longitude = longitude;
 
-    print('user to map ');
-    print('valor de user é ${user?.toMap()}');
     db.collection('requisitions')
     .doc(idRequisition)
     .update({
-      '${type}': user?.toMap()
+      type: user?.toMap()
     });
 
   }

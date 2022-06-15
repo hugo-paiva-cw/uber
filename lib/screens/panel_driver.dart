@@ -1,11 +1,9 @@
 import 'dart:async';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:uber/utils/firebase_user.dart';
 import 'package:uber/utils/status_requisition.dart';
-import 'package:uber/model/user.dart' as new_user;
 
 class PanelDriver extends StatefulWidget {
   const PanelDriver({Key? key}) : super(key: key);

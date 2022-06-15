@@ -22,7 +22,8 @@ class PanelPassenger extends StatefulWidget {
 }
 
 class _PanelPassengerState extends State<PanelPassenger> {
-  final TextEditingController _controllerDestiny = TextEditingController(text: 'av. paulista');
+  final TextEditingController _controllerDestiny =
+      TextEditingController(text: 'av. paulista');
   List<String> menuItems = ['Configurações', 'Deslogar'];
   final Completer<GoogleMapController> _controller = Completer();
   final CameraPosition _cameraPosition = const CameraPosition(
@@ -38,14 +39,12 @@ class _PanelPassengerState extends State<PanelPassenger> {
       altitude: 0.0,
       heading: 0.0,
       speed: 0.0,
-      speedAccuracy: 0.0
-  );
+      speedAccuracy: 0.0);
   Map<String, dynamic> _requisitionData = {};
-  // late Map _requisitionData;
   StreamSubscription<DocumentSnapshot>? _streamSubscriptionRequisitions;
   late StreamSubscription<Position> _streamLocationListener;
 
-  // Controls for screen exibition
+  // Controls for screen exhibition
   bool _showDestinyAddressBox = true;
   String _textButton = 'Chamar Uber';
   Color _buttonColor = const Color(0xff1ebbd8);
@@ -76,39 +75,29 @@ class _PanelPassengerState extends State<PanelPassenger> {
   _addLocationListener() {
     const locationSettings =
         LocationSettings(accuracy: LocationAccuracy.high, distanceFilter: 10);
-    _streamLocationListener = Geolocator.getPositionStream(locationSettings: locationSettings)
-        .listen((Position position) {
+    _streamLocationListener =
+        Geolocator.getPositionStream(locationSettings: locationSettings)
+            .listen((Position position) {
       if (_idRequisition != null && _idRequisition!.isNotEmpty) {
         // Update passenger location
-        FirebaseUser.updateLocationData(
-            _idRequisition!, position.latitude, position.longitude, 'passenger');
+        FirebaseUser.updateLocationData(_idRequisition!, position.latitude,
+            position.longitude, 'passenger');
       } else {
-        print('to posicionando');
         setState(() {
           _passengerLocation = position;
         });
         _statusUberNotCalled();
       }
-
     });
-  }
-
-  _getLastLocationKnown() async {
-    Position? position = await Geolocator.getLastKnownPosition();
-
-    if (position != null) {}
   }
 
   void _getLocationPermissions() async {
     bool serviceEnabled;
     LocationPermission permission;
 
-    // Test if location services are enabled.
+    // Test if location services are enabled
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      // Location services are not enabled don't continue
-      // accessing the position and request users of the
-      // App to enable the location services.
       return Future.error('Location services are disabled.');
     }
 
@@ -116,19 +105,8 @@ class _PanelPassengerState extends State<PanelPassenger> {
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-        // Permissions are denied, next time you could try
-        // requesting permissions again (this is also where
-        // Android's shouldShowRequestPermissionRationale
-        // returned true. According to Android guidelines
-        // your App should show an explanatory UI now.
         return Future.error('Location permissions are denied');
       }
-    }
-
-    if (permission == LocationPermission.deniedForever) {
-      // Permissions are denied forever, handle appropriately.
-      return Future.error(
-          'Location permissions are permanently denied, we cannot request permissions.');
     }
   }
 
@@ -172,7 +150,6 @@ class _PanelPassengerState extends State<PanelPassenger> {
 
         if (addresses.isNotEmpty) {
           Placemark address = addresses[0];
-          print('chamou uber');
 
           Destiny destiny = Destiny();
           destiny.city = address.administrativeArea ?? '';
@@ -235,7 +212,10 @@ class _PanelPassengerState extends State<PanelPassenger> {
 
     FirebaseFirestore db = FirebaseFirestore.instance;
 
-    await db.collection('requisitions').doc(requisition.id).set(requisition.toMap());
+    await db
+        .collection('requisitions')
+        .doc(requisition.id)
+        .set(requisition.toMap());
 
     // save active requisition
     Map<String, dynamic> activeRequisitionData = {};
@@ -268,8 +248,7 @@ class _PanelPassengerState extends State<PanelPassenger> {
       _callUber();
     });
 
-    if (_passengerLocation != null ) {
-
+    if (_passengerLocation != null) {
       Position position = Position(
           longitude: _passengerLocation.longitude,
           latitude: _passengerLocation.latitude,
@@ -283,9 +262,7 @@ class _PanelPassengerState extends State<PanelPassenger> {
       CameraPosition cameraPosition = CameraPosition(
           target: LatLng(position.latitude, position.longitude), zoom: 19);
       _moveCamera(cameraPosition);
-
     }
-
   }
 
   _statusWaiting() {
@@ -295,7 +272,6 @@ class _PanelPassengerState extends State<PanelPassenger> {
       _cancelUber();
     });
 
-    print('o requisition é $_requisitionData');
     double passengerLatitude = _requisitionData['passenger']['latitude'];
     double passengerLongitude = _requisitionData['passenger']['longitude'];
 
@@ -312,7 +288,6 @@ class _PanelPassengerState extends State<PanelPassenger> {
     CameraPosition cameraPosition = CameraPosition(
         target: LatLng(position.latitude, position.longitude), zoom: 19);
     _moveCamera(cameraPosition);
-    print('movi a camera no waiting');
   }
 
   _statusOnTheWay() {
@@ -329,14 +304,12 @@ class _PanelPassengerState extends State<PanelPassenger> {
     pin.Marker originMarker = pin.Marker(
         LatLng(driverLatitude, driverLongitude),
         '/assets/images/motorista.png',
-        'Local Motorista'
-    );
+        'Local Motorista');
 
     pin.Marker destinyMarker = pin.Marker(
         LatLng(passengerLatitude, passengerLongitude),
         '/assets/images/passageiro.png',
-        'Local Passageiro'
-    );
+        'Local Passageiro');
 
     _showCentralizedTwoMarkers(originMarker, destinyMarker);
   }
@@ -355,20 +328,17 @@ class _PanelPassengerState extends State<PanelPassenger> {
     pin.Marker originMarker = pin.Marker(
         LatLng(originLatitude, originLongitude),
         '/assets/images/motorista.png',
-        'Local Motorista'
-    );
+        'Local Motorista');
 
     pin.Marker destinyMarker = pin.Marker(
         LatLng(destinyLatitude, destinyLongitude),
         '/assets/images/destino.png',
-        'Local Destino'
-    );
+        'Local Destino');
 
     _showCentralizedTwoMarkers(originMarker, destinyMarker);
   }
 
   _statusFinished() async {
-
     // Calculating ride cost
     double destinyLatitude = _requisitionData['destiny']['latitude'];
     double destinyLongitude = _requisitionData['destiny']['longitude'];
@@ -377,21 +347,16 @@ class _PanelPassengerState extends State<PanelPassenger> {
     double originLongitude = _requisitionData['origin']['longitude'];
 
     double distanceInMeters = Geolocator.distanceBetween(
-        originLatitude,
-        originLongitude,
-        destinyLatitude,
-        destinyLongitude
-    );
+        originLatitude, originLongitude, destinyLatitude, destinyLongitude);
 
     double distanceKm = distanceInMeters / 1000;
 
     double priceTrip = distanceKm * 8;
 
-    var formater = NumberFormat('#,###0.00', 'pt_BR');
-    var priceTripFormated = formater.format( priceTrip );
+    var formatter = NumberFormat('#,###0.00', 'pt_BR');
+    var priceTripFormatted = formatter.format(priceTrip);
 
-
-    _setMainButton('Total --R\$ $priceTripFormated', Colors.green, () {});
+    _setMainButton('Total --R\$ $priceTripFormatted', Colors.green, () {});
 
     _markers = {};
     Position position = Position(
@@ -408,12 +373,10 @@ class _PanelPassengerState extends State<PanelPassenger> {
     CameraPosition cameraPosition = CameraPosition(
         target: LatLng(position.latitude, position.longitude), zoom: 19);
     _moveCamera(cameraPosition);
-
   }
 
   _statusConfirmed() {
-
-    if (_streamSubscriptionRequisitions != null ) {
+    if (_streamSubscriptionRequisitions != null) {
       _streamSubscriptionRequisitions!.cancel();
       _streamSubscriptionRequisitions = null;
     }
@@ -441,14 +404,13 @@ class _PanelPassengerState extends State<PanelPassenger> {
     _moveCamera(cameraPosition);
 
     _requisitionData = {};
-
   }
 
   _showMarker(Position local, String icon, String infoWindow) async {
     double pixelRatio = MediaQuery.of(context).devicePixelRatio;
 
     BitmapDescriptor.fromAssetImage(
-        ImageConfiguration(devicePixelRatio: pixelRatio), icon)
+            ImageConfiguration(devicePixelRatio: pixelRatio), icon)
         .then((BitmapDescriptor bitmapDescriptor) {
       Marker passengerMarker = Marker(
           markerId: MarkerId(icon),
@@ -462,18 +424,15 @@ class _PanelPassengerState extends State<PanelPassenger> {
     });
   }
 
-  _showCentralizedTwoMarkers(pin.Marker originMarker, pin.Marker destinyMarker ) {
-
+  _showCentralizedTwoMarkers(
+      pin.Marker originMarker, pin.Marker destinyMarker) {
     double originLatitude = originMarker.local.latitude;
     double originLongitude = originMarker.local.longitude;
 
     double destinyLatitude = originMarker.local.latitude;
     double destinyLongitude = originMarker.local.longitude;
 
-    _showTwoMarkers(
-        originMarker,
-        destinyMarker
-    );
+    _showTwoMarkers(originMarker, destinyMarker);
 
     late double northEastLatitude,
         northEastLongitude,
@@ -499,7 +458,6 @@ class _PanelPassengerState extends State<PanelPassenger> {
     _moveCameraUsingBounds(LatLngBounds(
         southwest: LatLng(southWestLatitude, southWestLongitude),
         northeast: LatLng(northEastLatitude, northEastLongitude)));
-
   }
 
   _moveCameraUsingBounds(LatLngBounds latLngBounds) async {
@@ -508,8 +466,7 @@ class _PanelPassengerState extends State<PanelPassenger> {
         .animateCamera(CameraUpdate.newLatLngBounds(latLngBounds, 100));
   }
 
-  _showTwoMarkers(pin.Marker originMarker, pin.Marker destinyMarker ) {
-
+  _showTwoMarkers(pin.Marker originMarker, pin.Marker destinyMarker) {
     LatLng latLngOrigin = originMarker.local;
     LatLng latLngDestiny = destinyMarker.local;
 
@@ -519,32 +476,27 @@ class _PanelPassengerState extends State<PanelPassenger> {
 
     // Driver pin location
     BitmapDescriptor.fromAssetImage(
-        ImageConfiguration(devicePixelRatio: pixelRatio),
-        originMarker.imagePath)
+            ImageConfiguration(devicePixelRatio: pixelRatio),
+            originMarker.imagePath)
         .then((BitmapDescriptor iconLocation) {
       Marker oMarker = Marker(
           markerId: MarkerId(originMarker.imagePath),
           position: LatLng(latLngOrigin.latitude, latLngDestiny.longitude),
           infoWindow: InfoWindow(title: originMarker.title),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen)
-        // icon: iconLocation
-      );
+          icon: iconLocation);
       listMarkers.add(oMarker);
     });
 
     // Passenger pin location
     BitmapDescriptor.fromAssetImage(
-        ImageConfiguration(devicePixelRatio: pixelRatio),
-        destinyMarker.imagePath)
+            ImageConfiguration(devicePixelRatio: pixelRatio),
+            destinyMarker.imagePath)
         .then((BitmapDescriptor iconLocation) {
       Marker dMarker = Marker(
           markerId: MarkerId(destinyMarker.imagePath),
-          position:
-          LatLng(latLngDestiny.latitude, latLngDestiny.longitude),
+          position: LatLng(latLngDestiny.latitude, latLngDestiny.longitude),
           infoWindow: InfoWindow(title: destinyMarker.title),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue)
-        // icon: iconLocation
-      );
+          icon: iconLocation);
       listMarkers.add(dMarker);
     });
 
@@ -555,20 +507,18 @@ class _PanelPassengerState extends State<PanelPassenger> {
 
   _cancelUber() {
     User firebaseUser = FirebaseUser.getCurrentUsser();
-    print('O id da requisiçao é ${_idRequisition}');
 
     FirebaseFirestore db = FirebaseFirestore.instance;
     db
         .collection('requisitions')
         .doc(_idRequisition)
         .update({'status': StatusRequisition.CANCELED}).then((_) {
-          print('FirebaseUser uid ${firebaseUser.uid}');
       db.collection('active_requisition').doc(firebaseUser.uid).delete();
     });
 
     _statusUberNotCalled();
 
-    if ( _streamSubscriptionRequisitions != null ) {
+    if (_streamSubscriptionRequisitions != null) {
       _streamSubscriptionRequisitions!.cancel();
       _streamSubscriptionRequisitions = null;
     }
@@ -586,7 +536,6 @@ class _PanelPassengerState extends State<PanelPassenger> {
       setState(() {
         _idRequisition = data['id_requisition'];
       });
-      print('Numero um ${_idRequisition}');
       _addRequisitionListener(_idRequisition!);
     } else {
       _statusUberNotCalled();
@@ -594,7 +543,6 @@ class _PanelPassengerState extends State<PanelPassenger> {
   }
 
   _addRequisitionListener(String idRequisition) async {
-    print('stream foi criado');
     FirebaseFirestore db = FirebaseFirestore.instance;
     _streamSubscriptionRequisitions = db
         .collection('requisitions')
@@ -611,7 +559,6 @@ class _PanelPassengerState extends State<PanelPassenger> {
       if (snapshot.data() != null) {
         Map<String, dynamic> data = snapshot.data()!;
         _requisitionData = data;
-        print('dados de requisicao sao ${_requisitionData}');
         String status = data['status'];
         _idRequisition = data['id'];
 
@@ -646,7 +593,6 @@ class _PanelPassengerState extends State<PanelPassenger> {
 
     _getActiveRequisition();
     _addLocationListener();
-
   }
 
   @override
@@ -674,7 +620,6 @@ class _PanelPassengerState extends State<PanelPassenger> {
             initialCameraPosition: _cameraPosition,
             mapType: MapType.normal,
             onMapCreated: _onMapCreated,
-            // myLocationEnabled: true,
             myLocationButtonEnabled: false,
             markers: _markers,
           ),
@@ -762,6 +707,7 @@ class _PanelPassengerState extends State<PanelPassenger> {
       ),
     );
   }
+
   @override
   void dispose() {
     super.dispose();

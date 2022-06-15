@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:uber/utils/firebase_user.dart';
@@ -52,19 +51,18 @@ class _RideState extends State<Ride> {
 
     Geolocator.getPositionStream(locationSettings: locationSettings)
         .listen((Position position) {
-        if (_idRequisition != null && _idRequisition!.isNotEmpty) {
-          if (_statusRequisition != StatusRequisition.WAITING) {
-            // Update driver location
-            FirebaseUser.updateLocationData(
-                _idRequisition!, position.latitude, position.longitude, 'driver');
-          } else {
-            print('to posicionando');
-            setState(() {
-              _driverLocation = position;
-            });
-            _statusWaiting();
-          }
+      if (_idRequisition != null && _idRequisition!.isNotEmpty) {
+        if (_statusRequisition != StatusRequisition.WAITING) {
+          // Update driver location
+          FirebaseUser.updateLocationData(
+              _idRequisition!, position.latitude, position.longitude, 'driver');
+        } else {
+          setState(() {
+            _driverLocation = position;
+          });
+          _statusWaiting();
         }
+      }
     });
   }
 
@@ -99,17 +97,6 @@ class _RideState extends State<Ride> {
         _markers.add(passengerMarker);
       });
     });
-  }
-
-  _getRequisition() async {
-    String idRequisition = widget.idRequisition;
-
-    FirebaseFirestore db = FirebaseFirestore.instance;
-    DocumentSnapshot<Map> documentSnapshot =
-        await db.collection('requisitions').doc(idRequisition).get();
-
-    _requisitionData = documentSnapshot.data();
-    _addRequisitionListener();
   }
 
   _addRequisitionListener() async {
@@ -151,13 +138,10 @@ class _RideState extends State<Ride> {
 
   _statusWaiting() {
     _setMainButton('Aceitar corrida', const Color(0xff1ebbd8), () {
-      print('olha eu aqui ${widget.idRequisition}');
       _acceptRide();
     });
 
-    print('before');
-    if (_driverLocation != null ) {
-      print('after');
+    if (_driverLocation != null) {
       double driverLatitude = _driverLocation!.latitude;
       double driverLongitude = _driverLocation!.longitude;
 
@@ -176,7 +160,6 @@ class _RideState extends State<Ride> {
           target: LatLng(position.latitude, position.longitude), zoom: 19);
       _moveCamera(cameraPosition);
     }
-
   }
 
   _statusOnTheWay() {
@@ -222,32 +205,26 @@ class _RideState extends State<Ride> {
   }
 
   _finishRide() {
-
     FirebaseFirestore db = FirebaseFirestore.instance;
-    db.collection('requisitions')
-    .doc( _idRequisition )
-    .update({
-      'status': StatusRequisition.FINALIZED
-    });
+    db
+        .collection('requisitions')
+        .doc(_idRequisition)
+        .update({'status': StatusRequisition.FINALIZED});
 
     String idPassenger = _requisitionData?['passenger']['idUser'];
     db
         .collection('active_requisition')
         .doc(idPassenger)
         .update({'status': StatusRequisition.FINALIZED});
-    print('teste status finalized user');
 
     String idDriver = _requisitionData?['driver']['idUser'];
     db
         .collection('active_requisition_driver')
         .doc(idDriver)
         .update({'status': StatusRequisition.FINALIZED});
-    print('teste status finalized user');
-
   }
 
   _statusFinished() async {
-
     // Calculating ride cost
     double destinyLatitude = _requisitionData?['destiny']['latitude'];
     double destinyLongitude = _requisitionData?['destiny']['longitude'];
@@ -256,22 +233,19 @@ class _RideState extends State<Ride> {
     double originLongitude = _requisitionData?['origin']['longitude'];
 
     double distanceInMeters = Geolocator.distanceBetween(
-        originLatitude,
-        originLongitude,
-        destinyLatitude,
-        destinyLongitude
-    );
+        originLatitude, originLongitude, destinyLatitude, destinyLongitude);
 
     double distanceKm = distanceInMeters / 1000;
 
     double priceTrip = distanceKm * 8;
 
     var formater = NumberFormat('#,###0.00', 'pt_BR');
-    var priceTripFormated = formater.format( priceTrip );
+    var priceTripFormated = formater.format(priceTrip);
 
     _statusMessage = 'Viagem finalizada';
 
-    _setMainButton('Confirmar --R\$ $priceTripFormated', const Color(0xff1ebbd8), () {
+    _setMainButton(
+        'Confirmar --R\$ $priceTripFormated', const Color(0xff1ebbd8), () {
       _confirmRide();
     });
 
@@ -290,33 +264,24 @@ class _RideState extends State<Ride> {
     CameraPosition cameraPosition = CameraPosition(
         target: LatLng(position.latitude, position.longitude), zoom: 19);
     _moveCamera(cameraPosition);
-
   }
 
   _statusConfirmed() {
-
     Navigator.pushReplacementNamed(context, '/panel-driver');
-
   }
 
   _confirmRide() {
     FirebaseFirestore db = FirebaseFirestore.instance;
-    db.collection('requisitions').doc(_idRequisition).update({
-      'status': StatusRequisition.CONFIRMED
-    });
+    db
+        .collection('requisitions')
+        .doc(_idRequisition)
+        .update({'status': StatusRequisition.CONFIRMED});
 
     String idPassenger = _requisitionData?['passenger']['idUser'];
-    db
-        .collection('active_requisition')
-        .doc(idPassenger)
-        .delete();
+    db.collection('active_requisition').doc(idPassenger).delete();
 
     String idDriver = _requisitionData?['driver']['idUser'];
-    db
-        .collection('active_requisition_driver')
-        .doc(idDriver)
-        .delete();
-
+    db.collection('active_requisition_driver').doc(idDriver).delete();
   }
 
   _statusOnTrip() {
@@ -371,22 +336,17 @@ class _RideState extends State<Ride> {
       'status': StatusRequisition.TRIP
     });
 
-
-    print('antes da req trip');
     String idPassenger = _requisitionData?['passenger']['idUser'];
     db
         .collection('active_requisition')
         .doc(idPassenger)
-        .update({'status': StatusRequisition.TRIP}).then((value) =>
-        print('teste status trip user')
-);
+        .update({'status': StatusRequisition.TRIP});
 
     String idDriver = _requisitionData?['driver']['idUser'];
     db
         .collection('active_requisition_driver')
         .doc(idDriver)
         .update({'status': StatusRequisition.TRIP});
-    print('errei sera');
   }
 
   _moveCameraUsingBounds(LatLngBounds latLngBounds) async {
@@ -409,7 +369,6 @@ class _RideState extends State<Ride> {
           markerId: const MarkerId('marcador-motorista'),
           position: LatLng(driverPosition.latitude, driverPosition.longitude),
           infoWindow: const InfoWindow(title: 'Meu local'),
-          // icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen)
           icon: iconLocation);
       listMarkers.add(driverMarker);
     });
@@ -424,7 +383,6 @@ class _RideState extends State<Ride> {
           position:
               LatLng(passengerPosition.latitude, passengerPosition.longitude),
           infoWindow: const InfoWindow(title: 'Meu local'),
-          // icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue)
           icon: iconLocation);
       listMarkers.add(passengerMarker);
     });
@@ -438,7 +396,6 @@ class _RideState extends State<Ride> {
     // Get driver's data
     new_user.User? driver = await FirebaseUser.getLoggedUserData();
     if (_driverLocation != null) {
-
       driver?.latitude = _driverLocation!.latitude;
       driver?.longitude = _driverLocation!.longitude;
 
@@ -450,14 +407,12 @@ class _RideState extends State<Ride> {
         'status': StatusRequisition.ONTHEWAY
       }).then((_) {
         String idPassenger = _requisitionData?['passenger']['idUser'];
-        print('a id do passageiro é $idPassenger');
         db
             .collection('active_requisition')
             .doc(idPassenger)
             .update({'status': StatusRequisition.ONTHEWAY});
 
         String idDriver = driver.idUser;
-        print('id motora $idDriver');
         db.collection('active_requisition_driver').doc(idDriver).set({
           'id_requisition': idRequisition,
           'id_user': idDriver,
@@ -476,8 +431,6 @@ class _RideState extends State<Ride> {
 
     _getLastLocationKnown();
     _addLocationListener();
-
-    // _getRequisition();
   }
 
   @override
