@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:uber/model/user.dart' as new_user;
+import 'package:uber/model/Marker.dart' as pin;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
@@ -39,7 +40,7 @@ class _PanelPassengerState extends State<PanelPassenger> {
       speedAccuracy: 0.0);
   Map<String, dynamic> _requisitionData = {};
   // late Map _requisitionData;
-  late StreamSubscription<DocumentSnapshot>? _streamSubscriptionRequisitions;
+  StreamSubscription<DocumentSnapshot>? _streamSubscriptionRequisitions;
 
   // Controls for screen exibition
   bool _showDestinyAddressBox = true;
@@ -322,33 +323,85 @@ class _PanelPassengerState extends State<PanelPassenger> {
     double driverLatitude = _requisitionData['driver']['latitude'];
     double driverLongitude = _requisitionData['driver']['longitude'];
 
-    _showTwoMarkers(LatLng(driverLatitude, driverLongitude),
-        LatLng(passengerLatitude, passengerLongitude));
+    pin.Marker originMarker = pin.Marker(
+        LatLng(driverLatitude, driverLongitude),
+        '/assets/images/motorista.png',
+        'Local Motorista'
+    );
+
+    pin.Marker destinyMarker = pin.Marker(
+        LatLng(passengerLatitude, passengerLongitude),
+        '/assets/images/passageiro.png',
+        'Local Passageiro'
+    );
+
+    _showCentralizedTwoMarkers(originMarker, destinyMarker);
+  }
+
+  _statusOnTrip() {
+    _showDestinyAddressBox = false;
+
+    _setMainButton('Em viagem', Colors.grey, () {});
+
+    double destinyLatitude = _requisitionData['destiny']['latitude'];
+    double destinyLongitude = _requisitionData['destiny']['longitude'];
+
+    double originLatitude = _requisitionData['driver']['latitude'];
+    double originLongitude = _requisitionData['driver']['longitude'];
+
+    pin.Marker originMarker = pin.Marker(
+        LatLng(originLatitude, originLongitude),
+        '/assets/images/motorista.png',
+        'Local Motorista'
+    );
+
+    pin.Marker destinyMarker = pin.Marker(
+        LatLng(destinyLatitude, destinyLongitude),
+        '/assets/images/destino.png',
+        'Local Destino'
+    );
+
+    _showCentralizedTwoMarkers(originMarker, destinyMarker);
+  }
+
+  _showCentralizedTwoMarkers(pin.Marker originMarker, pin.Marker destinyMarker ) {
+
+    double originLatitude = originMarker.local.latitude;
+    double originLongitude = originMarker.local.longitude;
+
+    double destinyLatitude = originMarker.local.latitude;
+    double destinyLongitude = originMarker.local.longitude;
+
+    _showTwoMarkers(
+        originMarker,
+        destinyMarker
+    );
 
     late double northEastLatitude,
         northEastLongitude,
         southWestLatitude,
         southWestLongitude;
 
-    if (driverLatitude <= passengerLatitude) {
-      southWestLatitude = driverLatitude;
-      northEastLatitude = passengerLatitude;
+    if (originLatitude <= destinyLatitude) {
+      southWestLatitude = originLatitude;
+      northEastLatitude = destinyLatitude;
     } else {
-      southWestLatitude = passengerLatitude;
-      northEastLatitude = driverLatitude;
+      southWestLatitude = destinyLatitude;
+      northEastLatitude = originLatitude;
     }
 
-    if (driverLongitude <= passengerLongitude) {
-      southWestLongitude = driverLongitude;
-      northEastLongitude = passengerLongitude;
+    if (originLongitude <= destinyLongitude) {
+      southWestLongitude = originLongitude;
+      northEastLongitude = destinyLongitude;
     } else {
-      southWestLongitude = driverLongitude;
-      northEastLongitude = passengerLongitude;
+      southWestLongitude = originLongitude;
+      northEastLongitude = destinyLongitude;
     }
 
     _moveCameraUsingBounds(LatLngBounds(
         southwest: LatLng(southWestLatitude, southWestLongitude),
         northeast: LatLng(northEastLatitude, northEastLongitude)));
+
   }
 
   _moveCameraUsingBounds(LatLngBounds latLngBounds) async {
@@ -357,7 +410,11 @@ class _PanelPassengerState extends State<PanelPassenger> {
         .animateCamera(CameraUpdate.newLatLngBounds(latLngBounds, 100));
   }
 
-  _showTwoMarkers(LatLng driverPosition, LatLng passengerPosition) {
+  _showTwoMarkers(pin.Marker originMarker, pin.Marker destinyMarker ) {
+
+    LatLng latLngOrigin = originMarker.local;
+    LatLng latLngDestiny = destinyMarker.local;
+
     double pixelRatio = MediaQuery.of(context).devicePixelRatio;
 
     Set<Marker> listMarkers = {};
@@ -365,32 +422,32 @@ class _PanelPassengerState extends State<PanelPassenger> {
     // Driver pin location
     BitmapDescriptor.fromAssetImage(
         ImageConfiguration(devicePixelRatio: pixelRatio),
-        '/assets/images/motorista.png')
+        originMarker.imagePath)
         .then((BitmapDescriptor iconLocation) {
-      Marker driverMarker = Marker(
-          markerId: const MarkerId('marcador-motorista'),
-          position: LatLng(driverPosition.latitude, driverPosition.longitude),
-          infoWindow: const InfoWindow(title: 'Meu local'),
+      Marker oMarker = Marker(
+          markerId: MarkerId(originMarker.imagePath),
+          position: LatLng(latLngOrigin.latitude, latLngDestiny.longitude),
+          infoWindow: InfoWindow(title: originMarker.title),
           icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen)
         // icon: iconLocation
       );
-      listMarkers.add(driverMarker);
+      listMarkers.add(oMarker);
     });
 
     // Passenger pin location
     BitmapDescriptor.fromAssetImage(
         ImageConfiguration(devicePixelRatio: pixelRatio),
-        '/assets/images/passageiro.png')
+        destinyMarker.imagePath)
         .then((BitmapDescriptor iconLocation) {
-      Marker passengerMarker = Marker(
-          markerId: const MarkerId('marcador-passageiro'),
+      Marker dMarker = Marker(
+          markerId: MarkerId(destinyMarker.imagePath),
           position:
-          LatLng(passengerPosition.latitude, passengerPosition.longitude),
-          infoWindow: const InfoWindow(title: 'Meu local'),
+          LatLng(latLngDestiny.latitude, latLngDestiny.longitude),
+          infoWindow: InfoWindow(title: destinyMarker.title),
           icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue)
         // icon: iconLocation
       );
-      listMarkers.add(passengerMarker);
+      listMarkers.add(dMarker);
     });
 
     setState(() {
@@ -432,6 +489,7 @@ class _PanelPassengerState extends State<PanelPassenger> {
   }
 
   _addRequisitionListener(String idRequisition) async {
+    print('stream foi criado');
     FirebaseFirestore db = FirebaseFirestore.instance;
     _streamSubscriptionRequisitions = db
         .collection('requisitions')
@@ -460,6 +518,7 @@ class _PanelPassengerState extends State<PanelPassenger> {
             _statusOnTheWay();
             break;
           case StatusRequisition.TRIP:
+            _statusOnTrip();
             break;
           case StatusRequisition.FINALIZED:
             break;
@@ -479,10 +538,6 @@ class _PanelPassengerState extends State<PanelPassenger> {
     _getActiveRequisition();
     _addLocationListener();
 
-    // _getLastLocationKnown();
-
-    // _addRequisitionListener();
-    // _statusUberNotCalled();
   }
 
   @override

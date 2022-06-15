@@ -25,7 +25,7 @@ class _RideState extends State<Ride> {
   );
   late Set<Marker> _markers = {};
   Map? _requisitionData = {};
-  late String? _idRequisition;
+  String? _idRequisition;
   late Position _driverLocation;
   String _statusRequisition = StatusRequisition.WAITING;
 
@@ -141,6 +141,7 @@ class _RideState extends State<Ride> {
             _statusOnTheWay();
             break;
           case StatusRequisition.TRIP:
+            _statusOnTrip();
             break;
           case StatusRequisition.FINALIZED:
             break;
@@ -216,6 +217,52 @@ class _RideState extends State<Ride> {
     } else {
       southWestLongitude = driverLongitude;
       northEastLongitude = passengerLongitude;
+    }
+
+    _moveCameraUsingBounds(LatLngBounds(
+        southwest: LatLng(southWestLatitude, southWestLongitude),
+        northeast: LatLng(northEastLatitude, northEastLongitude)));
+  }
+
+  _finishRide() {
+
+  }
+
+  _statusOnTrip() {
+    _statusMessage = 'Em viagem';
+
+    _setMainButton('Finalizar Corrida', const Color(0xff1ebbd8), () {
+      _finishRide();
+    });
+
+    double destinyLatitude = _requisitionData?['destiny']['latitude'];
+    double destinyLongitude = _requisitionData?['destiny']['longitude'];
+
+    double originLatitude = _requisitionData?['driver']['latitude'];
+    double originLongitude = _requisitionData?['driver']['longitude'];
+
+    _showTwoMarkers(LatLng(originLatitude, originLongitude),
+        LatLng(destinyLatitude, destinyLongitude));
+
+    late double northEastLatitude,
+        northEastLongitude,
+        southWestLatitude,
+        southWestLongitude;
+
+    if (originLatitude <= destinyLatitude) {
+      southWestLatitude = originLatitude;
+      northEastLatitude = destinyLatitude;
+    } else {
+      southWestLatitude = destinyLatitude;
+      northEastLatitude = originLatitude;
+    }
+
+    if (originLongitude <= destinyLongitude) {
+      southWestLongitude = originLongitude;
+      northEastLongitude = destinyLongitude;
+    } else {
+      southWestLongitude = originLongitude;
+      northEastLongitude = destinyLongitude;
     }
 
     _moveCameraUsingBounds(LatLngBounds(
