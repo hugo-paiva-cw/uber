@@ -144,7 +144,6 @@ class _PanelDriverState extends State<PanelDriver> {
               break;
             case ConnectionState.waiting:
               return loadingMessage;
-              break;
             case ConnectionState.active:
             case ConnectionState.done:
 

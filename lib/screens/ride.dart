@@ -71,7 +71,7 @@ class _RideState extends State<Ride> {
   }
 
   _getLastLocationKnown() async {
-    LocationPermission permission = await Geolocator.requestPermission();
+    await Geolocator.requestPermission();
     Position? position = await Geolocator.getLastKnownPosition();
 
     if (position != null) {
@@ -120,7 +120,7 @@ class _RideState extends State<Ride> {
   }
 
   _addRequisitionListener() async {
-    LocationPermission permission = await Geolocator.requestPermission();
+    await Geolocator.requestPermission();
     FirebaseFirestore db = FirebaseFirestore.instance;
     db
         .collection('requisitions')
@@ -145,6 +145,9 @@ class _RideState extends State<Ride> {
             break;
           case StatusRequisition.FINALIZED:
             _statusFinished();
+            break;
+          case StatusRequisition.CONFIRMED:
+            _statusConfirmed();
             break;
           case StatusRequisition.CANCELED:
             break;
@@ -257,7 +260,7 @@ class _RideState extends State<Ride> {
     double originLatitude = _requisitionData?['origin']['latitude'];
     double originLongitude = _requisitionData?['origin']['longitude'];
 
-    double distanceInMeters = await Geolocator.distanceBetween(
+    double distanceInMeters = Geolocator.distanceBetween(
         originLatitude,
         originLongitude,
         destinyLatitude,
@@ -277,9 +280,47 @@ class _RideState extends State<Ride> {
       _confirmRide();
     });
 
+    _markers = {};
+    Position position = Position(
+        longitude: destinyLongitude,
+        latitude: destinyLatitude,
+        timestamp: DateTime.now(),
+        accuracy: 0.0,
+        altitude: 0.0,
+        heading: 0.0,
+        speed: 0.0,
+        speedAccuracy: 0.0);
+    _showMarker(position, '/assets/images/destino.png', 'Destino');
+
+    CameraPosition cameraPosition = CameraPosition(
+        target: LatLng(position.latitude, position.longitude), zoom: 19);
+    _moveCamera(cameraPosition);
+
+  }
+
+  _statusConfirmed() {
+
+    Navigator.pushReplacementNamed(context, '/panel-driver');
+
   }
 
   _confirmRide() {
+    FirebaseFirestore db = FirebaseFirestore.instance;
+    db.collection('requisitions').doc(_idRequisition).update({
+      'status': StatusRequisition.CONFIRMED
+    });
+
+    String idPassenger = _requisitionData?['passenger']['idUser'];
+    db
+        .collection('active_requisition')
+        .doc(idPassenger)
+        .delete();
+
+    String idDriver = _requisitionData?['driver']['idUser'];
+    db
+        .collection('active_requisition_driver')
+        .doc(idDriver)
+        .delete();
 
   }
 

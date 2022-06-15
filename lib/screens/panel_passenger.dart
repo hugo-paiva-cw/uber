@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:uber/model/user.dart' as new_user;
-import 'package:uber/model/Marker.dart' as pin;
+import 'package:uber/model/marker.dart' as pin;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
@@ -12,6 +12,7 @@ import 'package:uber/model/destiny.dart';
 import 'package:uber/model/requisition.dart';
 import 'package:uber/utils/firebase_user.dart';
 import 'package:uber/utils/status_requisition.dart';
+import 'package:intl/intl.dart';
 
 class PanelPassenger extends StatefulWidget {
   const PanelPassenger({Key? key}) : super(key: key);
@@ -37,7 +38,8 @@ class _PanelPassengerState extends State<PanelPassenger> {
       altitude: 0.0,
       heading: 0.0,
       speed: 0.0,
-      speedAccuracy: 0.0);
+      speedAccuracy: 0.0
+  );
   Map<String, dynamic> _requisitionData = {};
   // late Map _requisitionData;
   StreamSubscription<DocumentSnapshot>? _streamSubscriptionRequisitions;
@@ -364,6 +366,83 @@ class _PanelPassengerState extends State<PanelPassenger> {
     _showCentralizedTwoMarkers(originMarker, destinyMarker);
   }
 
+  _statusFinished() async {
+
+    // Calculating ride cost
+    double destinyLatitude = _requisitionData['destiny']['latitude'];
+    double destinyLongitude = _requisitionData['destiny']['longitude'];
+
+    double originLatitude = _requisitionData['origin']['latitude'];
+    double originLongitude = _requisitionData['origin']['longitude'];
+
+    double distanceInMeters = Geolocator.distanceBetween(
+        originLatitude,
+        originLongitude,
+        destinyLatitude,
+        destinyLongitude
+    );
+
+    double distanceKm = distanceInMeters / 1000;
+
+    double priceTrip = distanceKm * 8;
+
+    var formater = NumberFormat('#,###0.00', 'pt_BR');
+    var priceTripFormated = formater.format( priceTrip );
+
+
+    _setMainButton('Total --R\$ $priceTripFormated', Colors.green, () {});
+
+    _markers = {};
+    Position position = Position(
+        longitude: destinyLongitude,
+        latitude: destinyLatitude,
+        timestamp: DateTime.now(),
+        accuracy: 0.0,
+        altitude: 0.0,
+        heading: 0.0,
+        speed: 0.0,
+        speedAccuracy: 0.0);
+    _showMarker(position, '/assets/images/destino.png', 'Destino');
+
+    CameraPosition cameraPosition = CameraPosition(
+        target: LatLng(position.latitude, position.longitude), zoom: 19);
+    _moveCamera(cameraPosition);
+
+  }
+
+  _statusConfirmed() {
+
+    if (_streamSubscriptionRequisitions != null ) {
+      _streamSubscriptionRequisitions?.cancel();
+    }
+
+    _showDestinyAddressBox = true;
+    _setMainButton('Chamar Uber', const Color(0xff1ebbd8), () {
+      _callUber();
+    });
+
+    _requisitionData = {};
+
+  }
+
+  _showMarker(Position local, String icon, String infoWindow) async {
+    double pixelRatio = MediaQuery.of(context).devicePixelRatio;
+
+    BitmapDescriptor.fromAssetImage(
+        ImageConfiguration(devicePixelRatio: pixelRatio), icon)
+        .then((BitmapDescriptor bitmapDescriptor) {
+      Marker passengerMarker = Marker(
+          markerId: MarkerId(icon),
+          position: LatLng(local.latitude, local.longitude),
+          infoWindow: InfoWindow(title: infoWindow),
+          icon: bitmapDescriptor);
+
+      setState(() {
+        _markers.add(passengerMarker);
+      });
+    });
+  }
+
   _showCentralizedTwoMarkers(pin.Marker originMarker, pin.Marker destinyMarker ) {
 
     double originLatitude = originMarker.local.latitude;
@@ -521,6 +600,10 @@ class _PanelPassengerState extends State<PanelPassenger> {
             _statusOnTrip();
             break;
           case StatusRequisition.FINALIZED:
+            _statusFinished();
+            break;
+          case StatusRequisition.CONFIRMED:
+            _statusConfirmed();
             break;
           case StatusRequisition.CANCELED:
             break;
